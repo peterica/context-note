@@ -1,0 +1,16 @@
+# AI Agent workspace files
+CLAUDE.md
+PLAN.md
+PROGRESS.md
+.claude/
+CLAUDE_CODE_PROJECT_SETUP_PROMPT.md
+
+# Dependencies
+dev/node_modules/
+
+# Next.js build
+dev/.next/
+
+# Misc
+.DS_Store
+*.log
