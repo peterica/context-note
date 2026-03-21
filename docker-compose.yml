@@ -1,0 +1,13 @@
+services:
+  context-note:
+    build:
+      context: ./dev
+      dockerfile: Dockerfile
+    container_name: context-note
+    ports:
+      - "8310:3000"
+    volumes:
+      - ./note:/data/note
+    environment:
+      - NOTE_ROOT=/data/note
+    restart: unless-stopped
