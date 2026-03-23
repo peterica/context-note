@@ -1,0 +1,12 @@
+# Dependencies
+dev/node_modules/
+
+# Next.js build
+dev/.next/
+
+# IDE
+.idea/
+
+# Misc
+.DS_Store
+*.log

@@ -1,0 +1,273 @@
+@import "tailwindcss";
+
+:root {
+  --background: #0c1222;
+  --foreground: #e2e8f0;
+  --primary: #3b82f6;
+  --primary-hover: #60a5fa;
+  --border: #1e293b;
+  --border-subtle: #162032;
+  --sidebar-bg: #0f1729;
+  --editor-bg: #111a2e;
+  --hover-bg: #182240;
+  --selected-bg: #1d3a6e;
+  --surface: #141e33;
+  --muted: #64748b;
+  --accent: #818cf8;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-border: var(--border);
+  --color-border-subtle: var(--border-subtle);
+  --color-sidebar-bg: var(--sidebar-bg);
+  --color-editor-bg: var(--editor-bg);
+  --color-hover-bg: var(--hover-bg);
+  --color-selected-bg: var(--selected-bg);
+  --color-surface: var(--surface);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #1e293b transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 3px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: #334155;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ============ Markdown Preview ============ */
+.tiptap {
+  outline: none;
+  min-height: 100%;
+  padding: 24px 32px;
+}
+
+.tiptap h2 {
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin-top: 32px;
+  margin-bottom: 12px;
+  color: #f1f5f9;
+  border-bottom: 1px solid #1e293b;
+  padding-bottom: 8px;
+  letter-spacing: -0.01em;
+}
+
+.tiptap h2:first-child {
+  margin-top: 0;
+}
+
+.tiptap h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-top: 24px;
+  margin-bottom: 8px;
+  color: #cbd5e1;
+  letter-spacing: -0.005em;
+}
+
+.tiptap h4 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-top: 16px;
+  margin-bottom: 4px;
+  color: #94a3b8;
+}
+
+.tiptap p {
+  margin: 6px 0;
+  line-height: 1.7;
+  color: #cbd5e1;
+}
+
+.tiptap ul {
+  list-style: disc;
+  padding-left: 24px;
+  margin: 8px 0;
+}
+
+.tiptap ol {
+  list-style: decimal;
+  padding-left: 24px;
+  margin: 8px 0;
+}
+
+.tiptap li {
+  margin: 4px 0;
+  line-height: 1.6;
+  color: #cbd5e1;
+}
+
+.tiptap li p {
+  margin: 0;
+}
+
+.tiptap .is-empty::before {
+  content: attr(data-placeholder);
+  color: #475569;
+  pointer-events: none;
+  float: left;
+  height: 0;
+}
+
+/* Table */
+.tiptap table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 16px 0;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid #1e293b;
+}
+
+.tiptap th,
+.tiptap td {
+  border: 1px solid #1e293b;
+  padding: 8px 12px;
+  text-align: left;
+  font-size: 0.875rem;
+}
+
+.tiptap th {
+  background: #182240;
+  font-weight: 600;
+  color: #e2e8f0;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.tiptap td {
+  background: #0f1729;
+  color: #cbd5e1;
+}
+
+/* Code block */
+.tiptap pre {
+  background: #0a1020;
+  border: 1px solid #1e293b;
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin: 16px 0;
+  overflow-x: auto;
+  font-family: "SF Mono", "Cascadia Code", "Fira Code", monospace;
+  font-size: 0.84rem;
+  line-height: 1.6;
+  color: #cbd5e1;
+}
+
+.tiptap pre code {
+  background: none;
+  padding: 0;
+  border: none;
+  font-size: inherit;
+  color: inherit;
+}
+
+/* Inline code */
+.tiptap code {
+  background: #1e293b;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: "SF Mono", "Cascadia Code", "Fira Code", monospace;
+  font-size: 0.84em;
+  color: #f0abfc;
+}
+
+/* Bold / Italic */
+.tiptap strong {
+  font-weight: 700;
+  color: #f1f5f9;
+}
+
+.tiptap em {
+  font-style: italic;
+  color: #cbd5e1;
+}
+
+/* Links */
+.tiptap a {
+  color: #60a5fa;
+  text-decoration: none;
+  border-bottom: 1px solid #60a5fa40;
+  transition: all 0.15s ease;
+}
+
+.tiptap a:hover {
+  color: #93c5fd;
+  border-bottom-color: #93c5fd;
+}
+
+/* HR */
+.tiptap hr {
+  border: none;
+  border-top: 1px solid #1e293b;
+  margin: 24px 0;
+}
+
+/* Blockquote */
+.tiptap blockquote {
+  border-left: 3px solid #3b82f6;
+  padding-left: 16px;
+  margin: 12px 0;
+  color: #94a3b8;
+  font-style: italic;
+}
+
+/* ============ Wikilinks ============ */
+.wikilink {
+  cursor: pointer;
+  text-decoration: none;
+  padding: 1px 4px;
+  border-radius: 3px;
+  transition: all 0.15s ease;
+}
+.wikilink-exists {
+  color: #818cf8;
+  background: #818cf810;
+}
+.wikilink-exists:hover {
+  color: #a5b4fc;
+  background: #818cf820;
+}
+.wikilink-broken {
+  color: #fb7185;
+  background: #fb718510;
+  text-decoration: underline;
+  text-decoration-style: wavy;
+  text-underline-offset: 2px;
+}
+.wikilink-broken:hover {
+  color: #fda4af;
+  background: #fb718520;
+}
