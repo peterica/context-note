@@ -7,24 +7,30 @@ export const NOTE_ROOT = process.env.NOTE_ROOT
   ? path.resolve(process.env.NOTE_ROOT)
   : path.resolve(process.cwd(), '..', 'note');
 
-/**
- * 상대 경로를 note/ 기준 절대 경로로 변환하되,
- * path traversal 공격을 방지합니다.
- */
-export function safePath(relativePath: string): string {
-  const resolved = path.resolve(NOTE_ROOT, relativePath);
-  if (!resolved.startsWith(NOTE_ROOT)) {
-    throw new Error('Invalid path: traversal detected');
-  }
-  return resolved;
-}
-
 export class ZoneViolationError extends Error {
   status = 400;
   constructor(message: string) {
     super(message);
     this.name = 'ZoneViolationError';
   }
+}
+
+/**
+ * 상대 경로를 note/ 기준 절대 경로로 변환하되,
+ * path traversal 공격을 방지합니다.
+ *
+ * 검증은 path separator 기준입니다. 단순 prefix 비교는
+ * `NOTE_ROOT_evil/...` 같은 형제 디렉터리 우회를 허용하므로 사용하지 않습니다.
+ *
+ * 실패 시 ZoneViolationError(status=400)를 던집니다.
+ */
+export function safePath(relativePath: string): string {
+  const resolved = path.resolve(NOTE_ROOT, relativePath);
+  const rootBoundary = NOTE_ROOT.endsWith(path.sep) ? NOTE_ROOT : NOTE_ROOT + path.sep;
+  if (resolved !== NOTE_ROOT && !resolved.startsWith(rootBoundary)) {
+    throw new ZoneViolationError('Invalid path: traversal detected');
+  }
+  return resolved;
 }
 
 const ZONE_PREFIX_HINT =
@@ -43,12 +49,7 @@ const ZONE_PREFIX_HINT =
  * 반환: 검증된 절대 경로
  */
 export async function assertWriteablePath(relPath: string): Promise<string> {
-  let absolute: string;
-  try {
-    absolute = safePath(relPath);
-  } catch {
-    throw new ZoneViolationError('Invalid path: traversal detected');
-  }
+  const absolute = safePath(relPath);
   const head = firstSegment(relPath);
   if (!head) {
     throw new ZoneViolationError(ZONE_PREFIX_HINT);

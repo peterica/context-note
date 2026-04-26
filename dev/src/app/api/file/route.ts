@@ -10,8 +10,17 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'path required' }, { status: 400 });
   }
 
+  let absolute: string;
   try {
-    const absolute = safePath(filePath);
+    absolute = safePath(filePath);
+  } catch (e) {
+    if (e instanceof ZoneViolationError) {
+      return NextResponse.json({ error: e.message }, { status: e.status });
+    }
+    return NextResponse.json({ error: 'File not found' }, { status: 404 });
+  }
+
+  try {
     const content = await fs.readFile(absolute, 'utf-8');
     return NextResponse.json({ path: filePath, content });
   } catch {
@@ -20,6 +29,8 @@ export async function GET(request: NextRequest) {
 }
 
 // PUT /api/file  { path, content }
+// 기존 파일(legacy 포함) 저장은 호환 허용,
+// 신규 파일(저장 시점에 미존재) 저장은 zone prefix를 강제한다.
 export async function PUT(request: NextRequest) {
   const body = await request.json();
   const { path: filePath, content } = body;
@@ -28,10 +39,27 @@ export async function PUT(request: NextRequest) {
   }
 
   try {
-    const absolute = safePath(filePath);
+    let absolute = safePath(filePath);
+
+    let exists = false;
+    try {
+      await fs.stat(absolute);
+      exists = true;
+    } catch {
+      // not exists → 신규 생성으로 간주
+    }
+
+    if (!exists) {
+      absolute = await assertWriteablePath(filePath);
+      await fs.mkdir(path.dirname(absolute), { recursive: true });
+    }
+
     await fs.writeFile(absolute, content, 'utf-8');
     return NextResponse.json({ ok: true });
   } catch (e) {
+    if (e instanceof ZoneViolationError) {
+      return NextResponse.json({ error: e.message }, { status: e.status });
+    }
     return NextResponse.json({ error: String(e) }, { status: 500 });
   }
 }
@@ -71,8 +99,17 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: 'path required' }, { status: 400 });
   }
 
+  let absolute: string;
   try {
-    const absolute = safePath(filePath);
+    absolute = safePath(filePath);
+  } catch (e) {
+    if (e instanceof ZoneViolationError) {
+      return NextResponse.json({ error: e.message }, { status: e.status });
+    }
+    return NextResponse.json({ error: 'File not found' }, { status: 404 });
+  }
+
+  try {
     await fs.unlink(absolute);
 
     // 부모 디렉토리가 비었으면 삭제 (NOTE_ROOT 자체는 유지)

@@ -3,24 +3,42 @@
 import { useEffect, useState } from 'react';
 import { useStore } from '@/store/useStore';
 
+// Atlas guide 후보 경로. 첫 번째 hit를 채택한다.
+// PR2.5에서 legacy 루트 파일이 system zone으로 이동될 예정이므로 zone 경로를 우선 시도한다.
+const ATLAS_GUIDE_PATHS = ['system/atlas-guide.md', '_atlas-guide.md'];
+
+// "New File" 기본 생성 위치. zone validation을 통과해야 하므로 root가 아닌 zone을 사용한다.
+const DEFAULT_NEW_FILE_ZONE = 'inbox';
+
 export default function LandingGuide() {
   const selectFile = useStore((s) => s.selectFile);
   const openCommandPalette = useStore((s) => s.openCommandPalette);
   const addFile = useStore((s) => s.addFile);
   const [guide, setGuide] = useState<{ sections: Section[] } | null>(null);
+  const [guidePath, setGuidePath] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch('/api/file?path=_atlas-guide.md')
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
+    const loadGuide = async () => {
+      for (const candidate of ATLAS_GUIDE_PATHS) {
+        const r = await fetch(`/api/file?path=${encodeURIComponent(candidate)}`);
+        if (!r.ok) continue;
+        const data = await r.json();
+        setGuidePath(candidate);
         if (data?.content) {
           setGuide({ sections: parseGuide(data.content) });
         }
-      });
+        return;
+      }
+    };
+    loadGuide();
   }, []);
 
   const handleNewFile = () => {
-    addFile('', 'untitled');
+    addFile(DEFAULT_NEW_FILE_ZONE, 'untitled');
+  };
+
+  const handleOpenGuide = () => {
+    if (guidePath) selectFile(guidePath);
   };
 
   return (
@@ -58,7 +76,7 @@ export default function LandingGuide() {
             <span className="text-xs text-gray-500">파일 검색하기</span>
           </button>
           <button
-            onClick={() => selectFile('_atlas-guide.md')}
+            onClick={handleOpenGuide}
             className="flex flex-col items-center gap-2 p-4 rounded-lg border border-border bg-hover-bg hover:border-primary hover:bg-primary/10 transition-colors group"
           >
             <span className="text-2xl">📖</span>

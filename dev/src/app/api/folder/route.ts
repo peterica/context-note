@@ -30,11 +30,21 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: 'path required' }, { status: 400 });
   }
 
+  let absolute: string;
   try {
-    const absolute = safePath(folderPath);
-    if (absolute === NOTE_ROOT) {
-      return NextResponse.json({ error: 'Cannot delete root' }, { status: 400 });
+    absolute = safePath(folderPath);
+  } catch (e) {
+    if (e instanceof ZoneViolationError) {
+      return NextResponse.json({ error: e.message }, { status: e.status });
     }
+    return NextResponse.json({ error: 'Folder not found' }, { status: 404 });
+  }
+
+  if (absolute === NOTE_ROOT) {
+    return NextResponse.json({ error: 'Cannot delete root' }, { status: 400 });
+  }
+
+  try {
     await fs.rm(absolute, { recursive: true });
     return NextResponse.json({ ok: true });
   } catch {
