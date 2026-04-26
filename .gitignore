@@ -10,3 +10,20 @@ dev/.next/
 # Misc
 .DS_Store
 *.log
+
+# Override global ignore so PR documentation under task/ stays tracked.
+# Re-ignore session-local notes inside task/ that shouldn't enter git.
+!task/
+!task/report/
+!task/plan.md
+!task/pr1-zone-skeleton.md
+!task/report/pr1-checklist.md
+!task/report/pr1-zone-skeleton_claude_result.md
+!task/report/pr1-review.md
+!task/report/pr1-fix.md
+task/prompt.md
+task/report/task1.md
+task/report/task1_result.md
+task/report/task3.md
+task/report/task3_checklist.md
+task/report/report_readme.md
