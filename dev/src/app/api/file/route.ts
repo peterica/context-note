@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs/promises';
 import path from 'path';
-import { NOTE_ROOT, safePath } from '@/lib/notePath';
+import { NOTE_ROOT, safePath, assertWriteablePath, ZoneViolationError } from '@/lib/notePath';
 
 // GET /api/file?path=rag-platform/design.md
 export async function GET(request: NextRequest) {
@@ -37,6 +37,7 @@ export async function PUT(request: NextRequest) {
 }
 
 // POST /api/file  { path }  — 새 파일 생성 (기본 템플릿)
+// 신규 생성은 zone prefix를 강제(legacy 호환은 assertWriteablePath 내부 규칙).
 export async function POST(request: NextRequest) {
   const body = await request.json();
   const filePath: string = body.path;
@@ -47,11 +48,14 @@ export async function POST(request: NextRequest) {
   const name = filePath.endsWith('.md') ? filePath : `${filePath}.md`;
 
   try {
-    const absolute = safePath(name);
+    const absolute = await assertWriteablePath(name);
     await fs.mkdir(path.dirname(absolute), { recursive: true });
     await fs.writeFile(absolute, '', { flag: 'wx' }); // wx = fail if exists
     return NextResponse.json({ ok: true, path: name });
   } catch (e) {
+    if (e instanceof ZoneViolationError) {
+      return NextResponse.json({ error: e.message }, { status: e.status });
+    }
     const err = e as NodeJS.ErrnoException;
     if (err.code === 'EEXIST') {
       return NextResponse.json({ error: 'File already exists' }, { status: 409 });
