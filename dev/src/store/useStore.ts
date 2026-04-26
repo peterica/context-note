@@ -47,7 +47,7 @@ interface StoreState {
 export const useStore = create<StoreState>((set, get) => ({
   tree: [],
   selectedFileId: null,
-  expandedFolders: new Set(['']),
+  expandedFolders: new Set(['inbox', 'wiki']),
   editorContent: '',
   loading: false,
   saveStatus: 'idle',

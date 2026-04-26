@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs/promises';
 import path from 'path';
-import { safePath } from '@/lib/notePath';
+import { safePath, assertWriteablePath, ZoneViolationError } from '@/lib/notePath';
 
 // PUT /api/rename  { from, to }
-// 파일/폴더 이름 변경 및 이동 모두 처리
+// 파일/폴더 이름 변경 및 이동 모두 처리.
+// from은 호환 허용(safePath만), to는 zone prefix 강제(legacy 호환 포함).
 export async function PUT(request: NextRequest) {
   const body = await request.json();
   const { from, to } = body;
@@ -14,7 +15,7 @@ export async function PUT(request: NextRequest) {
 
   try {
     const fromAbsolute = safePath(from);
-    const toAbsolute = safePath(to);
+    const toAbsolute = await assertWriteablePath(to);
 
     // 대상 경로의 부모 디렉토리 생성
     await fs.mkdir(path.dirname(toAbsolute), { recursive: true });
@@ -42,6 +43,9 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json({ ok: true });
   } catch (e) {
+    if (e instanceof ZoneViolationError) {
+      return NextResponse.json({ error: e.message }, { status: e.status });
+    }
     return NextResponse.json({ error: String(e) }, { status: 500 });
   }
 }
