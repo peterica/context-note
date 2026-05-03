@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs/promises';
 import path from 'path';
-import { safePath } from '@/lib/notePath';
+import { realSafePath } from '@/lib/notePath';
 
 // PUT /api/rename  { from, to }
 // 파일/폴더 이름 변경 및 이동 모두 처리
@@ -13,8 +13,8 @@ export async function PUT(request: NextRequest) {
   }
 
   try {
-    const fromAbsolute = safePath(from);
-    const toAbsolute = safePath(to);
+    const fromAbsolute = await realSafePath(from);
+    const toAbsolute = await realSafePath(to);
 
     // 대상 경로의 부모 디렉토리 생성
     await fs.mkdir(path.dirname(toAbsolute), { recursive: true });

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs/promises';
-import { safePath, NOTE_ROOT } from '@/lib/notePath';
+import { realSafePath, NOTE_ROOT } from '@/lib/notePath';
 
 // POST /api/folder  { path }
 export async function POST(request: NextRequest) {
@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const absolute = safePath(folderPath);
+    const absolute = await realSafePath(folderPath);
     await fs.mkdir(absolute, { recursive: true });
     return NextResponse.json({ ok: true });
   } catch (e) {
@@ -27,7 +27,7 @@ export async function DELETE(request: NextRequest) {
   }
 
   try {
-    const absolute = safePath(folderPath);
+    const absolute = await realSafePath(folderPath);
     if (absolute === NOTE_ROOT) {
       return NextResponse.json({ error: 'Cannot delete root' }, { status: 400 });
     }

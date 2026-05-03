@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs/promises';
 import path from 'path';
-import { NOTE_ROOT, safePath } from '@/lib/notePath';
+import { NOTE_ROOT, realSafePath } from '@/lib/notePath';
 
 // GET /api/file?path=rag-platform/design.md
 export async function GET(request: NextRequest) {
@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const absolute = safePath(filePath);
+    const absolute = await realSafePath(filePath);
     const content = await fs.readFile(absolute, 'utf-8');
     return NextResponse.json({ path: filePath, content });
   } catch {
@@ -28,7 +28,7 @@ export async function PUT(request: NextRequest) {
   }
 
   try {
-    const absolute = safePath(filePath);
+    const absolute = await realSafePath(filePath);
     await fs.writeFile(absolute, content, 'utf-8');
     return NextResponse.json({ ok: true });
   } catch (e) {
@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
   const name = filePath.endsWith('.md') ? filePath : `${filePath}.md`;
 
   try {
-    const absolute = safePath(name);
+    const absolute = await realSafePath(name);
     await fs.mkdir(path.dirname(absolute), { recursive: true });
     await fs.writeFile(absolute, '', { flag: 'wx' }); // wx = fail if exists
     return NextResponse.json({ ok: true, path: name });
@@ -68,7 +68,7 @@ export async function DELETE(request: NextRequest) {
   }
 
   try {
-    const absolute = safePath(filePath);
+    const absolute = await realSafePath(filePath);
     await fs.unlink(absolute);
 
     // 부모 디렉토리가 비었으면 삭제 (NOTE_ROOT 자체는 유지)
