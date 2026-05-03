@@ -121,8 +121,7 @@ export const useStore = create<StoreState>((set, get) => ({
   },
 
   addFile: async (parentId, name) => {
-    const fileName = name.endsWith('.md') ? name : `${name}.md`;
-    const filePath = parentId ? `${parentId}/${fileName}` : fileName;
+    const filePath = joinPath(parentId, ensureMarkdownExtension(name));
     const res = await fetch('/api/file', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -137,7 +136,7 @@ export const useStore = create<StoreState>((set, get) => ({
   },
 
   addFolder: async (parentId, name) => {
-    const folderPath = parentId ? `${parentId}/${name}` : name;
+    const folderPath = joinPath(parentId, name);
     const res = await fetch('/api/folder', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -166,12 +165,11 @@ export const useStore = create<StoreState>((set, get) => ({
   },
 
   renameNode: async (id, newName, type) => {
-    const dir = id.includes('/') ? id.substring(0, id.lastIndexOf('/')) : '';
-    const newPath = dir ? `${dir}/${newName}` : newName;
+    const dir = parentPathOf(id);
+    const newPath = joinPath(dir, newName);
 
     if (type === 'file') {
-      const finalName = newName.endsWith('.md') ? newName : `${newName}.md`;
-      const finalPath = dir ? `${dir}/${finalName}` : finalName;
+      const finalPath = joinPath(dir, ensureMarkdownExtension(newName));
       const res = await fetch('/api/rename', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -192,25 +190,18 @@ export const useStore = create<StoreState>((set, get) => ({
       });
       if (res.ok) {
         const { selectedFileId, expandedFolders } = get();
-        // 선택된 파일이 이 폴더 안에 있으면 경로 업데이트
-        if (selectedFileId?.startsWith(id + '/')) {
-          set({ selectedFileId: selectedFileId.replace(id, newPath) });
-        }
-        // expandedFolders 업데이트
-        const expanded = new Set(expandedFolders);
-        if (expanded.has(id)) {
-          expanded.delete(id);
-          expanded.add(newPath);
-        }
-        set({ expandedFolders: expanded });
+        set({
+          selectedFileId: updateSelectedPath(selectedFileId, id, newPath),
+          expandedFolders: renameExpandedFolder(expandedFolders, id, newPath),
+        });
         await get().fetchTree();
       }
     }
   },
 
   moveNode: async (id, newParentId, type) => {
-    const name = id.includes('/') ? id.substring(id.lastIndexOf('/') + 1) : id;
-    const newPath = newParentId ? `${newParentId}/${name}` : name;
+    const name = baseNameOf(id);
+    const newPath = joinPath(newParentId, name);
 
     const res = await fetch('/api/rename', {
       method: 'PUT',
@@ -219,11 +210,7 @@ export const useStore = create<StoreState>((set, get) => ({
     });
     if (res.ok) {
       const { selectedFileId } = get();
-      if (type === 'file' && selectedFileId === id) {
-        set({ selectedFileId: newPath });
-      } else if (type === 'folder' && selectedFileId?.startsWith(id + '/')) {
-        set({ selectedFileId: selectedFileId.replace(id, newPath) });
-      }
+      set({ selectedFileId: updateMovedSelection(selectedFileId, id, newPath, type) });
       const expanded = new Set(get().expandedFolders);
       expanded.add(newParentId);
       set({ expandedFolders: expanded });
@@ -291,6 +278,63 @@ export const useStore = create<StoreState>((set, get) => ({
     set({ backlinkIndex: index });
   },
 }));
+
+function joinPath(parent: string, name: string): string {
+  return parent ? `${parent}/${name}` : name;
+}
+
+function ensureMarkdownExtension(name: string): string {
+  return name.endsWith('.md') ? name : `${name}.md`;
+}
+
+function parentPathOf(nodeId: string): string {
+  return nodeId.includes('/') ? nodeId.substring(0, nodeId.lastIndexOf('/')) : '';
+}
+
+function baseNameOf(nodeId: string): string {
+  return nodeId.includes('/') ? nodeId.substring(nodeId.lastIndexOf('/') + 1) : nodeId;
+}
+
+function replacePathPrefix(target: string, from: string, to: string): string {
+  return target === from ? to : `${to}${target.slice(from.length)}`;
+}
+
+function updateSelectedPath(selectedFileId: string | null, from: string, to: string): string | null {
+  if (!selectedFileId?.startsWith(`${from}/`)) {
+    return selectedFileId;
+  }
+  return replacePathPrefix(selectedFileId, from, to);
+}
+
+function updateMovedSelection(
+  selectedFileId: string | null,
+  from: string,
+  to: string,
+  type: 'file' | 'folder',
+): string | null {
+  if (!selectedFileId) {
+    return selectedFileId;
+  }
+  if (type === 'file') {
+    return selectedFileId === from ? to : selectedFileId;
+  }
+  return updateSelectedPath(selectedFileId, from, to);
+}
+
+function renameExpandedFolder(expandedFolders: Set<string>, from: string, to: string): Set<string> {
+  const next = new Set<string>();
+  const prefix = `${from}/`;
+  for (const id of expandedFolders) {
+    if (id === from) {
+      next.add(to);
+    } else if (id.startsWith(prefix)) {
+      next.add(`${to}/${id.slice(prefix.length)}`);
+    } else {
+      next.add(id);
+    }
+  }
+  return next;
+}
 
 // Flatten tree into a list of files for search
 export function flattenTree(nodes: FileNode[]): FileNode[] {
