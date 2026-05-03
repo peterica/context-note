@@ -3,11 +3,11 @@ services:
     build:
       context: ./dev
       dockerfile: Dockerfile
-    container_name: context-note
+    container_name: context-note-${PROJECT_NAME:-default}
     ports:
-      - "8080:3000"
+      - "${PORT:-8080}:3000"
     volumes:
-      - ./note:/data/note
+      - ${NOTE_PATH:-./note}:/data/note
     environment:
       - NOTE_ROOT=/data/note
     restart: unless-stopped

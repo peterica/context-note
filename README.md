@@ -26,6 +26,58 @@ npm run dev
 
 http://localhost:3000 에서 접속합니다.
 
+## Server Scripts
+
+여러 프로젝트 위키를 각자의 포트로 관리할 때 `start.sh` / `stop.sh` 를 사용합니다.
+포트는 자동으로 8080부터 할당되며 `projects/.ports` 에 등록됩니다.
+
+### Start
+
+```bash
+# 1. 새 프로젝트 자동 생성 + 기동 (./projects/<name>/note 스캐폴딩)
+./start.sh my-wiki
+
+# 2. 기존 디렉토리를 위키 루트로 사용
+./start.sh my-wiki --path /Users/seodong-eok/peterica/semi-project/peterica-edge-rag/task/ondevice-rag --port 8320
+
+# 3. 포트 강제 지정
+./start.sh my-wiki --port 8090
+```
+```bash
+./start.sh contextflow \
+--path /Users/seodong-eok/peterica/ContextFlow \
+--port 8330
+```
+```bash
+./start.sh my-wiki \
+--path /Users/seodong-eok/peterica/semi-project/context-note \
+--port 8320
+```
+
+> 프로젝트 이름은 소문자/숫자/`_`/`-` 만 허용됩니다 (docker compose 제약). 호스트 디렉토리 경로는 대소문자 무관.
+
+실행 결과:
+
+```
+Starting [my-wiki]
+  port : 8080
+  note : /.../projects/my-wiki/note
+Context Note Wiki [my-wiki] ready at http://localhost:8080
+```
+
+### Stop
+
+```bash
+# 이름으로 중지
+./stop.sh my-wiki
+
+# 포트로 중지
+./stop.sh --port 8080
+
+# 등록된 모든 프로젝트 중지
+./stop.sh --all
+```
+
 ## Screenshots
 
 ### Structured Editor
