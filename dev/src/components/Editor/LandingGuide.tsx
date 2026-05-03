@@ -7,17 +7,19 @@ export default function LandingGuide() {
   const selectFile = useStore((s) => s.selectFile);
   const openCommandPalette = useStore((s) => s.openCommandPalette);
   const addFile = useStore((s) => s.addFile);
+  const currentProject = useStore((s) => s.currentProject);
   const [guide, setGuide] = useState<{ sections: Section[] } | null>(null);
 
   useEffect(() => {
-    fetch('/api/file?path=_atlas-guide.md')
+    if (!currentProject) return;
+    fetch(`/api/file?project=${encodeURIComponent(currentProject)}&path=_atlas-guide.md`)
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (data?.content) {
           setGuide({ sections: parseGuide(data.content) });
         }
       });
-  }, []);
+  }, [currentProject]);
 
   const handleNewFile = () => {
     addFile('', 'untitled');

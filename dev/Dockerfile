@@ -18,7 +18,7 @@ FROM base AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
-ENV NOTE_ROOT=/data/note
+ENV WORKSPACE_ROOT=/workspace
 
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
@@ -28,9 +28,9 @@ COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
 
-# note 볼륨 마운트 포인트
-RUN mkdir -p /data/note && chown nextjs:nodejs /data/note
-VOLUME ["/data/note"]
+# workspace 볼륨 마운트 포인트
+RUN mkdir -p /workspace && chown nextjs:nodejs /workspace
+VOLUME ["/workspace"]
 
 USER nextjs
 

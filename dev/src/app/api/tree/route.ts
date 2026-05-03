@@ -1,7 +1,7 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs/promises';
 import path from 'path';
-import { NOTE_ROOT } from '@/lib/notePath';
+import { projectRoot } from '@/lib/notePath';
 
 interface TreeNode {
   id: string;
@@ -22,7 +22,7 @@ async function buildTree(dirPath: string, relativePath: string): Promise<TreeNod
 
   // 폴더 먼저, 파일 다음 (각각 알파벳 정렬)
   const sorted = entries
-    .filter((e) => !e.name.startsWith('.'))
+    .filter((e) => !e.name.startsWith('.') && e.name !== 'node_modules')
     .sort((a, b) => {
       if (a.isDirectory() && !b.isDirectory()) return -1;
       if (!a.isDirectory() && b.isDirectory()) return 1;
@@ -53,12 +53,24 @@ async function buildTree(dirPath: string, relativePath: string): Promise<TreeNod
   return nodes;
 }
 
-export async function GET() {
-  const children = await buildTree(NOTE_ROOT, '');
+export async function GET(request: NextRequest) {
+  const project = request.nextUrl.searchParams.get('project');
+  if (!project) {
+    return NextResponse.json({ error: 'project required' }, { status: 400 });
+  }
+
+  let root: string;
+  try {
+    root = projectRoot(project);
+  } catch (e) {
+    return NextResponse.json({ error: String(e) }, { status: 400 });
+  }
+
+  const children = await buildTree(root, '');
   const tree: TreeNode[] = [
     {
       id: '',
-      name: 'wiki',
+      name: project.split('/').pop() || project,
       type: 'folder',
       children,
     },

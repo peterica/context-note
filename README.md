@@ -48,9 +48,11 @@ http://localhost:3000 에서 접속합니다.
 --path /Users/seodong-eok/peterica/ContextFlow \
 --port 8330
 ```
+
 ```bash
-./start.sh my-wiki \
---path /Users/seodong-eok/peterica/semi-project/context-note \
+./start.sh po
+cket-skill-router \
+--path /Users/seodong-eok/peterica/semi-project/pocket-skill-router \
 --port 8320
 ```
 

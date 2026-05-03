@@ -11,5 +11,3 @@ dev/.next/
 .DS_Store
 *.log
 
-# Multi-project runtime state (port registry + scaffolded wikis)
-projects/
