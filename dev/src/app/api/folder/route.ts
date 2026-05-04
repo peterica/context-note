@@ -1,17 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs/promises';
-import { realSafePath, NOTE_ROOT } from '@/lib/notePath';
+import { realSafePath, projectRoot } from '@/lib/notePath';
 
-// POST /api/folder  { path }
+// POST /api/folder  { project, path }
 export async function POST(request: NextRequest) {
   const body = await request.json();
+  const project: string = body.project;
   const folderPath: string = body.path;
-  if (!folderPath) {
-    return NextResponse.json({ error: 'path required' }, { status: 400 });
+  if (!project || !folderPath) {
+    return NextResponse.json({ error: 'project and path required' }, { status: 400 });
   }
 
   try {
-    const absolute = await realSafePath(folderPath);
+    const absolute = await realSafePath(project, folderPath);
     await fs.mkdir(absolute, { recursive: true });
     return NextResponse.json({ ok: true });
   } catch (e) {
@@ -19,17 +20,18 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// DELETE /api/folder?path=some-folder
+// DELETE /api/folder?project=foo&path=some-folder
 export async function DELETE(request: NextRequest) {
+  const project = request.nextUrl.searchParams.get('project');
   const folderPath = request.nextUrl.searchParams.get('path');
-  if (!folderPath) {
-    return NextResponse.json({ error: 'path required' }, { status: 400 });
+  if (!project || !folderPath) {
+    return NextResponse.json({ error: 'project and path required' }, { status: 400 });
   }
 
   try {
-    const absolute = await realSafePath(folderPath);
-    if (absolute === NOTE_ROOT) {
-      return NextResponse.json({ error: 'Cannot delete root' }, { status: 400 });
+    const absolute = await realSafePath(project, folderPath);
+    if (absolute === projectRoot(project)) {
+      return NextResponse.json({ error: 'Cannot delete project root' }, { status: 400 });
     }
     await fs.rm(absolute, { recursive: true });
     return NextResponse.json({ ok: true });

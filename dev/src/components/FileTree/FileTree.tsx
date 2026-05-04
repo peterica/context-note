@@ -27,8 +27,12 @@ function filterTree(nodes: FileNode[], query: string): FileNode[] {
 
 export default function FileTree() {
   const { tree, searchQuery, setSearchQuery, openCommandPalette } = useStore();
+  const currentProject = useStore((s) => s.currentProject);
+  const openProjectPicker = useStore((s) => s.openProjectPicker);
   const [width, setWidth] = useState(DEFAULT_WIDTH);
   const isResizing = useRef(false);
+
+  const projectLabel = currentProject ? currentProject.split('/').pop() || currentProject : 'No project';
 
   const filteredTree = useMemo(() => filterTree(tree, searchQuery), [tree, searchQuery]);
 
@@ -83,6 +87,19 @@ export default function FileTree() {
             </svg>
           </button>
         </div>
+        <button
+          onClick={openProjectPicker}
+          title={currentProject || 'Select a project'}
+          className="w-full flex items-center gap-2 mb-2 px-2 py-1.5 text-xs text-foreground/80 hover:text-foreground bg-surface hover:bg-hover-bg border border-border-subtle rounded-md transition-all"
+        >
+          <svg className="w-3.5 h-3.5 shrink-0 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+          </svg>
+          <span className="truncate flex-1 text-left">{projectLabel}</span>
+          <svg className="w-3 h-3 shrink-0 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l4-4 4 4m0 6l-4 4-4-4" />
+          </svg>
+        </button>
         <div className="relative">
           <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />

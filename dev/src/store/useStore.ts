@@ -4,7 +4,12 @@ import { buildBacklinkIndex } from '@/lib/wikilink';
 
 export type SaveStatus = 'idle' | 'editing' | 'saving' | 'saved' | 'error';
 
+const PROJECT_STORAGE_KEY = 'cn:currentProject';
+
 interface StoreState {
+  // Multi-project
+  currentProject: string | null;
+
   tree: FileNode[];
   selectedFileId: string | null;
   expandedFolders: Set<string>;
@@ -19,8 +24,17 @@ interface StoreState {
   searchQuery: string;
   commandPaletteOpen: boolean;
 
+  // Project picker
+  projectPickerOpen: boolean;
+
   // Backlinks
   backlinkIndex: Map<string, string[]>;
+
+  // Project lifecycle
+  hydrateProject: () => void;
+  setCurrentProject: (project: string | null) => void;
+  openProjectPicker: () => void;
+  closeProjectPicker: () => void;
 
   fetchTree: () => Promise<void>;
   selectFile: (id: string) => Promise<void>;
@@ -44,7 +58,14 @@ interface StoreState {
   buildBacklinks: () => Promise<void>;
 }
 
+function withProject(url: string, project: string): string {
+  const sep = url.includes('?') ? '&' : '?';
+  return `${url}${sep}project=${encodeURIComponent(project)}`;
+}
+
 export const useStore = create<StoreState>((set, get) => ({
+  currentProject: null,
+
   tree: [],
   selectedFileId: null,
   expandedFolders: new Set(['']),
@@ -59,19 +80,59 @@ export const useStore = create<StoreState>((set, get) => ({
   searchQuery: '',
   commandPaletteOpen: false,
 
+  // Project picker
+  projectPickerOpen: false,
+
   // Backlinks
   backlinkIndex: new Map(),
 
+  hydrateProject: () => {
+    if (typeof window === 'undefined') return;
+    const stored = window.localStorage.getItem(PROJECT_STORAGE_KEY);
+    if (stored) {
+      set({ currentProject: stored });
+    } else {
+      set({ projectPickerOpen: true });
+    }
+  },
+
+  setCurrentProject: (project) => {
+    if (typeof window !== 'undefined') {
+      if (project) window.localStorage.setItem(PROJECT_STORAGE_KEY, project);
+      else window.localStorage.removeItem(PROJECT_STORAGE_KEY);
+    }
+    set({
+      currentProject: project,
+      tree: [],
+      selectedFileId: null,
+      editorContent: '',
+      isDirty: false,
+      saveStatus: 'idle',
+      recentFiles: [],
+      backlinkIndex: new Map(),
+      expandedFolders: new Set(['']),
+      projectPickerOpen: false,
+    });
+  },
+
+  openProjectPicker: () => set({ projectPickerOpen: true }),
+  closeProjectPicker: () => set({ projectPickerOpen: false }),
+
   fetchTree: async () => {
-    const res = await fetch('/api/tree');
+    const project = get().currentProject;
+    if (!project) return;
+    const res = await fetch(withProject('/api/tree', project));
+    if (!res.ok) return;
     const tree: FileNode[] = await res.json();
     set({ tree });
   },
 
   selectFile: async (id) => {
+    const project = get().currentProject;
+    if (!project) return;
     set({ loading: true });
     try {
-      const res = await fetch(`/api/file?path=${encodeURIComponent(id)}`);
+      const res = await fetch(withProject(`/api/file?path=${encodeURIComponent(id)}`, project));
       if (!res.ok) throw new Error('Failed to load file');
       const data = await res.json();
       const recent = [id, ...get().recentFiles.filter((f) => f !== id)].slice(0, 10);
@@ -96,8 +157,8 @@ export const useStore = create<StoreState>((set, get) => ({
   },
 
   saveFile: async () => {
-    const { selectedFileId, editorContent } = get();
-    if (!selectedFileId) return;
+    const { selectedFileId, editorContent, currentProject } = get();
+    if (!selectedFileId || !currentProject) return;
     set({ saveStatus: 'saving' });
 
     const MAX_RETRIES = 3;
@@ -106,7 +167,7 @@ export const useStore = create<StoreState>((set, get) => ({
         const res = await fetch('/api/file', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ path: selectedFileId, content: editorContent }),
+          body: JSON.stringify({ project: currentProject, path: selectedFileId, content: editorContent }),
         });
         if (!res.ok) throw new Error(`Save failed: ${res.status}`);
         set({ saveStatus: 'saved', isDirty: false, lastSavedAt: Date.now() });
@@ -121,11 +182,13 @@ export const useStore = create<StoreState>((set, get) => ({
   },
 
   addFile: async (parentId, name) => {
+    const project = get().currentProject;
+    if (!project) return;
     const filePath = joinPath(parentId, ensureMarkdownExtension(name));
     const res = await fetch('/api/file', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ path: filePath }),
+      body: JSON.stringify({ project, path: filePath }),
     });
     if (res.ok) {
       const expanded = new Set(get().expandedFolders);
@@ -136,11 +199,13 @@ export const useStore = create<StoreState>((set, get) => ({
   },
 
   addFolder: async (parentId, name) => {
+    const project = get().currentProject;
+    if (!project) return;
     const folderPath = joinPath(parentId, name);
     const res = await fetch('/api/folder', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ path: folderPath }),
+      body: JSON.stringify({ project, path: folderPath }),
     });
     if (res.ok) {
       const expanded = new Set(get().expandedFolders);
@@ -151,10 +216,13 @@ export const useStore = create<StoreState>((set, get) => ({
   },
 
   deleteNode: async (id, type) => {
+    const project = get().currentProject;
+    if (!project) return;
     const endpoint = type === 'folder' ? '/api/folder' : '/api/file';
-    const res = await fetch(`${endpoint}?path=${encodeURIComponent(id)}`, {
-      method: 'DELETE',
-    });
+    const res = await fetch(
+      withProject(`${endpoint}?path=${encodeURIComponent(id)}`, project),
+      { method: 'DELETE' },
+    );
     if (res.ok) {
       const { selectedFileId } = get();
       if (selectedFileId === id || (type === 'folder' && selectedFileId?.startsWith(id + '/'))) {
@@ -165,6 +233,8 @@ export const useStore = create<StoreState>((set, get) => ({
   },
 
   renameNode: async (id, newName, type) => {
+    const project = get().currentProject;
+    if (!project) return;
     const dir = parentPathOf(id);
     const newPath = joinPath(dir, newName);
 
@@ -173,7 +243,7 @@ export const useStore = create<StoreState>((set, get) => ({
       const res = await fetch('/api/rename', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ from: id, to: finalPath }),
+        body: JSON.stringify({ project, from: id, to: finalPath }),
       });
       if (res.ok) {
         const { selectedFileId } = get();
@@ -186,7 +256,7 @@ export const useStore = create<StoreState>((set, get) => ({
       const res = await fetch('/api/rename', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ from: id, to: newPath }),
+        body: JSON.stringify({ project, from: id, to: newPath }),
       });
       if (res.ok) {
         const { selectedFileId, expandedFolders } = get();
@@ -200,13 +270,15 @@ export const useStore = create<StoreState>((set, get) => ({
   },
 
   moveNode: async (id, newParentId, type) => {
+    const project = get().currentProject;
+    if (!project) return;
     const name = baseNameOf(id);
     const newPath = joinPath(newParentId, name);
 
     const res = await fetch('/api/rename', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: id, to: newPath }),
+      body: JSON.stringify({ project, from: id, to: newPath }),
     });
     if (res.ok) {
       const { selectedFileId } = get();
@@ -219,7 +291,9 @@ export const useStore = create<StoreState>((set, get) => ({
   },
 
   snapshotFile: async (fileId) => {
-    const res = await fetch(`/api/file?path=${encodeURIComponent(fileId)}`);
+    const project = get().currentProject;
+    if (!project) return;
+    const res = await fetch(withProject(`/api/file?path=${encodeURIComponent(fileId)}`, project));
     if (!res.ok) return;
     const data = await res.json();
 
@@ -242,12 +316,12 @@ export const useStore = create<StoreState>((set, get) => ({
     await fetch('/api/file', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ path: snapshotPath }),
+      body: JSON.stringify({ project, path: snapshotPath }),
     });
     await fetch('/api/file', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ path: snapshotPath, content: data.content }),
+      body: JSON.stringify({ project, path: snapshotPath, content: data.content }),
     });
 
     await get().fetchTree();
@@ -261,11 +335,13 @@ export const useStore = create<StoreState>((set, get) => ({
 
   // Backlinks
   buildBacklinks: async () => {
+    const project = get().currentProject;
+    if (!project) return;
     const allFiles = flattenTree(get().tree);
     const filesWithContent: { id: string; content: string }[] = [];
     for (const file of allFiles) {
       try {
-        const res = await fetch(`/api/file?path=${encodeURIComponent(file.id)}`);
+        const res = await fetch(withProject(`/api/file?path=${encodeURIComponent(file.id)}`, project));
         if (res.ok) {
           const data = await res.json();
           filesWithContent.push({ id: file.id, content: data.content });

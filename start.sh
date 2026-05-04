@@ -3,22 +3,29 @@ set -e
 
 cd "$(dirname "$0")"
 
-# note 디렉토리 없으면 생성
-mkdir -p note
+PORT="${PORT:-8080}"
+WORKSPACE_ROOT="${WORKSPACE_ROOT:-/Users/seodong-eok/peterica}"
 
-# 컨테이너 시작 (이미 실행중이면 재시작)
-if docker compose ps --status running 2>/dev/null | grep -q context-note; then
-  echo "context-note already running, restarting..."
-  docker compose restart
-else
-  docker compose up -d --build
+if [ ! -d "$WORKSPACE_ROOT" ]; then
+  echo "error: WORKSPACE_ROOT '$WORKSPACE_ROOT' is not a directory" >&2
+  exit 1
 fi
 
-# 서버 준비 대기
+WORKSPACE_ABS="$(cd "$WORKSPACE_ROOT" && pwd)"
+export PORT
+export WORKSPACE_ROOT="$WORKSPACE_ABS"
+
+echo "Starting Context Note"
+echo "  port      : $PORT"
+echo "  workspace : $WORKSPACE_ROOT"
+
+docker compose up -d --build
+
 echo "Waiting for server..."
-until curl -s -o /dev/null http://localhost:8080; do
+until curl -s -o /dev/null "http://localhost:${PORT}"; do
   sleep 1
 done
 
-echo "Context Note Wiki ready at http://localhost:8080"
-open http://localhost:8080
+URL="http://localhost:${PORT}"
+echo "Context Note ready at ${URL}"
+open "$URL" 2>/dev/null || true

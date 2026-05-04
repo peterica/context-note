@@ -1,30 +1,55 @@
 import path from 'path';
 import fs from 'fs/promises';
 
-export const NOTE_ROOT = process.env.NOTE_ROOT
-  ? path.resolve(process.env.NOTE_ROOT)
-  : path.resolve(process.cwd(), '..', 'note');
+// WORKSPACE_ROOT: 모든 프로젝트의 부모 디렉터리.
+// 컨테이너에선 /workspace 로 마운트, 로컬 dev에선 ../workspace 기본값.
+export const WORKSPACE_ROOT = process.env.WORKSPACE_ROOT
+  ? path.resolve(process.env.WORKSPACE_ROOT)
+  : path.resolve(process.cwd(), '..', 'workspace');
 
-function lexicalResolve(relativePath: string): string {
-  const resolved = path.resolve(NOTE_ROOT, relativePath);
-  const rel = path.relative(NOTE_ROOT, resolved);
-  if (rel.startsWith('..') || path.isAbsolute(rel)) {
+function isInside(parent: string, child: string): boolean {
+  return child === parent || child.startsWith(parent + path.sep);
+}
+
+export function projectRoot(projectPath: string): string {
+  if (typeof projectPath !== 'string' || projectPath.length === 0) {
+    throw new Error('project required');
+  }
+  const resolved = path.resolve(WORKSPACE_ROOT, projectPath);
+  if (resolved === WORKSPACE_ROOT) {
+    throw new Error('Invalid project: must be a subdirectory of workspace');
+  }
+  if (!isInside(WORKSPACE_ROOT, resolved)) {
+    throw new Error('Invalid project: traversal detected');
+  }
+  return resolved;
+}
+
+function lexicalResolve(projectPath: string, relativePath: string): string {
+  const root = projectRoot(projectPath);
+  const resolved = path.resolve(root, relativePath);
+  if (!isInside(root, resolved)) {
     throw new Error('Invalid path: traversal detected');
   }
   return resolved;
 }
 
-let realRootPromise: Promise<string> | null = null;
-function getRealRoot(): Promise<string> {
-  if (!realRootPromise) realRootPromise = fs.realpath(NOTE_ROOT);
-  return realRootPromise;
+const realRootCache = new Map<string, Promise<string>>();
+function getRealRoot(projectPath: string): Promise<string> {
+  const root = projectRoot(projectPath);
+  let cached = realRootCache.get(root);
+  if (!cached) {
+    cached = fs.realpath(root);
+    realRootCache.set(root, cached);
+  }
+  return cached;
 }
 
 // realpath 기반으로 symlink 탈출까지 차단. 파일이 아직 없으면(POST/PUT 신규)
 // 가장 깊은 기존 조상까지 walk-up 후 그 realpath + 남은 segment로 검증.
-export async function realSafePath(relativePath: string): Promise<string> {
-  const resolved = lexicalResolve(relativePath);
-  const realRoot = await getRealRoot();
+export async function realSafePath(projectPath: string, relativePath: string = ''): Promise<string> {
+  const resolved = lexicalResolve(projectPath, relativePath);
+  const realRoot = await getRealRoot(projectPath);
 
   let probe = resolved;
   const trailing: string[] = [];

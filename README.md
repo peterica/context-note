@@ -52,6 +52,33 @@ npm run dev
 
 로컬 개발 모드에서는 기본적으로 저장소 루트의 `note/` 디렉터리를 사용합니다.
 
+## 여러 프로젝트 관리
+
+여러 위키를 각자의 포트로 동시에 띄울 때는 `start.sh` / `stop.sh` 의 멀티 프로젝트 옵션을 사용합니다. 포트는 8080부터 자동 할당되며 `projects/.ports` 에 등록됩니다.
+
+```bash
+# 새 프로젝트 자동 생성 + 기동 (./projects/<name>/note 스캐폴딩)
+./start.sh my-wiki
+
+# 기존 디렉토리를 위키 루트로 사용
+./start.sh my-wiki --path /absolute/path/to/notes --port 8320
+
+# 포트 강제 지정
+./start.sh my-wiki --port 8090
+```
+
+> 프로젝트 이름은 소문자/숫자/`_`/`-` 만 허용됩니다 (docker compose 제약). 호스트 디렉토리 경로는 대소문자 무관.
+
+중지:
+
+```bash
+./stop.sh my-wiki        # 이름으로
+./stop.sh --port 8080    # 포트로
+./stop.sh --all          # 등록된 모든 프로젝트
+```
+
+브라우저에서는 첫 실행 시 Project Picker가 떠서 어떤 프로젝트를 열지 선택합니다. 선택 결과는 브라우저 localStorage 에 저장되며, 좌측 상단에서 다시 열어 다른 프로젝트로 전환할 수 있습니다.
+
 ## 기본 사용 흐름
 
 1. 왼쪽 파일 트리에서 폴더를 펼치고 문서를 선택합니다.
@@ -102,19 +129,19 @@ npm run dev
 
 ## 저장 위치
 
-문서는 데이터베이스가 아니라 실제 파일로 저장됩니다.
+문서는 데이터베이스가 아니라 실제 파일로 저장됩니다. 모든 프로젝트는 `WORKSPACE_ROOT` 아래의 하위 디렉토리로 다뤄집니다.
 
 ```text
-note/
-├── getting-started/
-├── examples/
-├── context-os/
-└── rag-platform/
+workspace/                  # WORKSPACE_ROOT
+├── my-wiki/
+│   └── note/
+├── contextflow/
+└── pocket-skill-router/
 ```
 
-- Docker 실행 시: `./note`가 컨테이너의 `/data/note`에 마운트됩니다.
-- 로컬 개발 시: 루트의 `note/`를 직접 사용합니다.
-- API는 `NOTE_ROOT` 환경 변수를 우선 사용합니다.
+- 컨테이너 실행 시: 호스트의 `./projects` (또는 `--path` 로 지정한 절대경로) 가 `/workspace` 로 마운트됩니다.
+- 로컬 개발 시: 기본값은 저장소 루트의 `../workspace` 입니다. `WORKSPACE_ROOT` 환경 변수로 덮어쓸 수 있습니다.
+- API 호출은 모두 `?project=<name>` 쿼리/바디 파라미터로 어느 프로젝트인지 명시합니다.
 
 ## 프로젝트 구조
 
@@ -132,10 +159,12 @@ context-note-docker/
     │       ├── tree/
     │       ├── file/
     │       ├── folder/
-    │       └── rename/
+    │       ├── rename/
+    │       └── projects/
     ├── src/components/
     │   ├── FileTree/
     │   ├── Editor/
+    │   ├── ProjectPicker/
     │   └── CommandPalette/
     ├── src/store/
     └── src/lib/

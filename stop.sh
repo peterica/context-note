@@ -3,6 +3,5 @@ set -e
 
 cd "$(dirname "$0")"
 
-docker compose down
-
-echo "Context Note Wiki stopped."
+docker compose down || true
+echo "Context Note stopped."

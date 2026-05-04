@@ -5,9 +5,9 @@ services:
       dockerfile: Dockerfile
     container_name: context-note
     ports:
-      - "8080:3000"
+      - "${PORT:-8080}:3000"
     volumes:
-      - ./note:/data/note
+      - ${WORKSPACE_ROOT:-/Users/seodong-eok/peterica}:/workspace
     environment:
-      - NOTE_ROOT=/data/note
+      - WORKSPACE_ROOT=/workspace
     restart: unless-stopped
